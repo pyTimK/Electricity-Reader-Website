@@ -11,4 +11,6 @@ export interface Device {
   limit3: number;
   limit4: number;
   limit5: number;
+  temp: number;
+  humidity: number;
 }

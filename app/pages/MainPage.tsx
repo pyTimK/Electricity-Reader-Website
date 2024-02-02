@@ -13,6 +13,8 @@ import { useInputField } from "@/hooks/useInputField";
 import MyButton from "@/components/templates/MyButton";
 import FH from "@/classes/FH";
 import notify from "@/myfunctions/notify";
+import TemperatureIcon from "@/components/custom/TemperatureIcon";
+import HumidityIcon from "@/components/custom/HumidityIcon";
 
 interface MainPageProps {}
 
@@ -28,7 +30,9 @@ const MainPage: React.FC<MainPageProps> = ({}) => {
 
   const voltages = [device?.volt1 ?? 0];
 
-  const power = currents.map((c, i) => c * voltages[0]);
+  const power = currents.map((c, i) => (c * voltages[0]) / 1000);
+  const temperature = device?.temp ?? 0;
+  const humidity = device?.humidity ?? 0;
   const [hasLimitUpdates, setHasLimitUpdates] = useState(false);
 
   const limit1Input = useInputField((limit) => [
@@ -145,6 +149,23 @@ const MainPage: React.FC<MainPageProps> = ({}) => {
 
         <hr className="text-gray opacity-20 pb-5" />
 
+        {/* //! TEMPERATURE & HIMIDITY */}
+        <p className="text-lg mb-6">Humidity & Temperature</p>
+        <div className="flex gap-5 flex-wrap justify-around pb-10">
+          <ElectricityBox
+            value={temperature}
+            title={`Temperature`}
+            type={tempType}
+          />
+          <ElectricityBox
+            value={humidity}
+            title={`Humidity`}
+            type={humidityType}
+          />
+        </div>
+
+        <hr className="text-gray opacity-20 pb-5" />
+
         {/* //! LIMITS */}
         <form
           className="flex w-full px-10 flex-col justify-center gap-10 mb-10 text-left"
@@ -224,7 +245,7 @@ const MainPage: React.FC<MainPageProps> = ({}) => {
 export default MainPage;
 
 interface ElectricityBoxType {
-  type: "current" | "voltage" | "power";
+  type: "current" | "voltage" | "power" | "temperature" | "humidity";
   color: string;
   icon: React.ReactNode;
   unit: string;
@@ -249,6 +270,20 @@ const powerType: ElectricityBoxType = {
   color: "border-yellow",
   icon: <BatteryIcon size={28} />,
   unit: Constants.powerUnit,
+};
+
+const tempType: ElectricityBoxType = {
+  type: "temperature",
+  color: "border-gcash_blue",
+  icon: <TemperatureIcon size={15} />,
+  unit: Constants.temperatureUnit,
+};
+
+const humidityType: ElectricityBoxType = {
+  type: "humidity",
+  color: "border-red_light",
+  icon: <HumidityIcon size={28} />,
+  unit: Constants.humidityUnit,
 };
 
 //! ELECTRICITY BOX
