@@ -78,7 +78,7 @@ const MainPage: React.FC<MainPageProps> = ({}) => {
     limit3Input.setValue(device.limit3.toString());
     limit4Input.setValue(device.limit4.toString());
     limit5Input.setValue(device.limit5.toString());
-  }, [device]);
+  }, []);
 
   const updateLimits = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
