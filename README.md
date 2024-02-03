@@ -1,10 +1,10 @@
 # On Watch
 
-The application is currently deployed at [https://bike-rack-lock.web.app](https://https://bike-rack-lock.web.app/)
+The application is currently deployed at [http://current-voltage-reader.web.app](https://http://current-voltage-reader.web.app/)
 
 ## Screenshot
 
-![alt text](https://github.com/pyTimK/bike-rack-lock/blob/main/public/images/screenshot.png)
+![alt text](https://github.com/pyTimK/Electricity-Reader-Website/blob/main/public/images/screenshot.png)
 
 ## About
 
