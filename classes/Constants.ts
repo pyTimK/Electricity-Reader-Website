@@ -1,7 +1,8 @@
 export abstract class StorageNames {}
 
 export const Constants = {
-  powerUnit: "kWh",
+  powerUnit: "W",
+  kwhUnit: "kWh",
   currentUnit: "A",
   voltageUnit: "V",
   temperatureUnit: "°C",

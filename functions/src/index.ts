@@ -17,10 +17,30 @@ export interface Device {
   limit3: number;
   limit4: number;
   limit5: number;
+  kwh1: number;
+  kwh2: number;
+  kwh3: number;
+  kwh4: number;
+  kwh5: number;
+  temp: number;
+  humidity: number;
 }
+
+const currentOffset = 0.6;
 
 initializeApp();
 setGlobalOptions({ region: "asia-east1", maxInstances: 10 });
+
+exports.updateKwh = onDocumentUpdated("device/readings", async (event) => {
+  if (!event || !event.data) return;
+
+  const oldReadingData = event.data.before.data() as Device;
+  const newReadingData = event.data.after.data() as Device;
+
+  if (anyCurrentChanged(oldReadingData, newReadingData)) {
+    updateKwh(newReadingData, event.data.after.ref);
+  }
+});
 
 exports.watchCurrent = onDocumentUpdated("device/readings", async (event) => {
   if (!event || !event.data) return;
@@ -63,6 +83,10 @@ exports.watchCurrent = onDocumentUpdated("device/readings", async (event) => {
     sendNotif(5, newReadingData.limit5);
   }
 
+  // if (anyCurrentChanged(oldReadingData, newReadingData)) {
+  //   updateKwh(newReadingData, event.data.after.ref);
+  // }
+
   logger.info(`newReadingData.port1: ${newReadingData.port1}`, {
     structuredData: true,
   });
@@ -73,6 +97,46 @@ exports.watchCurrent = onDocumentUpdated("device/readings", async (event) => {
   //   structuredData: true,
   // });
 });
+
+function anyCurrentChanged(oldReadingData: Device, newReadingData: Device) {
+  return (
+    oldReadingData.port1 !== newReadingData.port1 ||
+    oldReadingData.port2 !== newReadingData.port2 ||
+    oldReadingData.port3 !== newReadingData.port3 ||
+    oldReadingData.port4 !== newReadingData.port4 ||
+    oldReadingData.port5 !== newReadingData.port5
+  );
+}
+
+function updateKwh(
+  device: Device,
+  ref: FirebaseFirestore.DocumentReference<FirebaseFirestore.DocumentData>
+) {
+  logger.info(`will updateKwh: ${device.id}`, {
+    structuredData: true,
+  });
+
+  const currents = [
+    device.port1,
+    device.port2,
+    device.port3,
+    device.port4,
+    device.port5,
+  ];
+
+  const voltages = [device.volt1];
+
+  const power = currents.map((c, i) => (c * voltages[0]) / 1000);
+  const additionalKwh = power.map((p, i) => (p * 5) / 3600);
+
+  ref.update({
+    kwh1: device.kwh1 + additionalKwh[0],
+    kwh2: device.kwh2 + additionalKwh[1],
+    kwh3: device.kwh3 + additionalKwh[2],
+    kwh4: device.kwh4 + additionalKwh[3],
+    kwh5: device.kwh5 + additionalKwh[4],
+  });
+}
 
 async function sendNotif(port: number, limit: number) {
   logger.info(`sendNotif: PORT:${port} - LIMIT:${limit}`, {
@@ -88,7 +152,9 @@ async function sendNotif(port: number, limit: number) {
   allTokens.forEach(async (tokenDoc) => {
     const message: Message = {
       notification: {
-        title: `Current in Port ${port} has exceeded the limit of ${limit}mA`,
+        title: `Current in Port ${port} has exceeded the limit of ${(
+          limit - currentOffset
+        ).toFixed(2)}A`,
         //   body: `Current in Port ${port} has exceeded the limit of ${limit}mA!`,
         imageUrl:
           "https://static-00.iconduck.com/assets.00/caution-electricity-icon-2048x1802-d6m6g25z.png",

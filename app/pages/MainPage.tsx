@@ -15,12 +15,18 @@ import FH from "@/classes/FH";
 import notify from "@/myfunctions/notify";
 import TemperatureIcon from "@/components/custom/TemperatureIcon";
 import HumidityIcon from "@/components/custom/HumidityIcon";
+import WattIcon from "@/components/custom/WattIcon";
+import DeleteIcon from "@/components/svg/icon/DeleteIcon";
+import useModal from "@/hooks/useModal";
+import MyModal from "@/components/templates/MyModal";
 
 interface MainPageProps {}
+const currentOffset = 0.6;
 
 const MainPage: React.FC<MainPageProps> = ({}) => {
+  const resetModal = useModal();
   const { device } = useContext(FHContext);
-  const currents = [
+  let currents = [
     device?.port1 ?? 0,
     device?.port2 ?? 0,
     device?.port3 ?? 0,
@@ -28,9 +34,27 @@ const MainPage: React.FC<MainPageProps> = ({}) => {
     device?.port5 ?? 0,
   ];
 
-  const voltages = [device?.volt1 ?? 0];
+  for (let i = 0; i < currents.length; i++) {
+    currents[i] -= currentOffset;
+    if (currents[i] < 0) currents[i] = 0;
 
-  const power = currents.map((c, i) => (c * voltages[0]) / 1000);
+    if (currents[i] > 2.2) currents[i] += 1.1;
+    // if (currents[i] <= 0.4) currents[i] /= 10;
+  }
+
+  let voltages = [device?.volt1 ?? 0];
+  while (voltages[0] > 242) {
+    voltages[0] = voltages[0] - 12;
+  }
+
+  const power = currents.map((c, i) => c * voltages[0]);
+  const kwh = [
+    (device?.kwh1 ?? 0).toFixed(2),
+    (device?.kwh2 ?? 0).toFixed(2),
+    (device?.kwh3 ?? 0).toFixed(2),
+    (device?.kwh4 ?? 0).toFixed(2),
+    (device?.kwh5 ?? 0).toFixed(2),
+  ];
   const temperature = device?.temp ?? 0;
   const humidity = device?.humidity ?? 0;
   const [hasLimitUpdates, setHasLimitUpdates] = useState(false);
@@ -73,11 +97,11 @@ const MainPage: React.FC<MainPageProps> = ({}) => {
   //! INITIALIZE FIELDS
   useEffect(() => {
     if (!device) return;
-    limit1Input.setValue(device.limit1.toString());
-    limit2Input.setValue(device.limit2.toString());
-    limit3Input.setValue(device.limit3.toString());
-    limit4Input.setValue(device.limit4.toString());
-    limit5Input.setValue(device.limit5.toString());
+    limit1Input.setValue((device.limit1 - currentOffset).toFixed(2));
+    limit2Input.setValue((device.limit2 - currentOffset).toFixed(2));
+    limit3Input.setValue((device.limit3 - currentOffset).toFixed(2));
+    limit4Input.setValue((device.limit4 - currentOffset).toFixed(2));
+    limit5Input.setValue((device.limit5 - currentOffset).toFixed(2));
   }, []);
 
   const updateLimits = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -86,11 +110,11 @@ const MainPage: React.FC<MainPageProps> = ({}) => {
     if (!device) return;
     try {
       await FH.Device.update(device, {
-        limit1: Number(limit1Input.getValue()) ?? device.limit1,
-        limit2: Number(limit2Input.getValue()) ?? device.limit2,
-        limit3: Number(limit3Input.getValue()) ?? device.limit3,
-        limit4: Number(limit4Input.getValue()) ?? device.limit4,
-        limit5: Number(limit5Input.getValue()) ?? device.limit5,
+        limit1: Number(limit1Input.getValue()) + currentOffset ?? device.limit1,
+        limit2: Number(limit2Input.getValue()) + currentOffset ?? device.limit2,
+        limit3: Number(limit3Input.getValue()) + currentOffset ?? device.limit3,
+        limit4: Number(limit4Input.getValue()) + currentOffset ?? device.limit4,
+        limit5: Number(limit5Input.getValue()) + currentOffset ?? device.limit5,
       });
       notify("Limits updated successfully", { type: "success" });
     } catch (error) {
@@ -101,10 +125,45 @@ const MainPage: React.FC<MainPageProps> = ({}) => {
     setHasLimitUpdates(false);
   };
 
+  const resetKWH = async () => {
+    if (!device) return;
+    try {
+      await FH.Device.update(device, {
+        kwh1: 0,
+        kwh2: 0,
+        kwh3: 0,
+        kwh4: 0,
+        kwh5: 0,
+      });
+      notify("KWH reset successfully", { type: "success" });
+    } catch (error) {
+      console.log(error);
+      notify("An error occured while resetting KWH");
+    }
+    resetModal.close();
+  };
+
   return (
     <div className="bg-bg">
       <Header />
       <div className="flex flex-col pt-24 pb-2 h-full min-h-screen text-center">
+        {/* //! KWH */}
+        <div className="flex gap-3 justify-center items-center mb-6">
+          <p className="text-lg">Kilowatt-Hour</p>
+          <DeleteIcon size={20} onClick={resetModal.open} />
+        </div>
+        <div className="flex gap-5 flex-wrap justify-around pb-10">
+          {kwh.map((k, i) => (
+            <ElectricityBox
+              value={Number(k)}
+              title={`PORT ${i + 1}`}
+              key={i}
+              type={kwhType}
+            />
+          ))}
+        </div>
+
+        <hr className="text-gray opacity-20 pb-5" />
         {/* //! POWER */}
         <p className="text-lg mb-6">Power</p>
         <div className="flex gap-5 flex-wrap justify-around pb-10">
@@ -238,6 +297,31 @@ const MainPage: React.FC<MainPageProps> = ({}) => {
         {/* //! CUSTOMER SERVICE */}
         <CallCustomerService />
       </div>
+
+      <MyModal useModal={resetModal} title="RESET KWH">
+        <div className="flex flex-col items-center gap-5">
+          <p className="text-smooth_black text-center">
+            Are you sure you want to reset kwh readings?
+          </p>
+          <div className="flex gap-5">
+            <MyButton
+              type="button"
+              label="Cancel"
+              outlined
+              className="rounded-full"
+              pY={0.2}
+              onClick={resetModal.close}
+            />
+            <MyButton
+              type="button"
+              label="Reset"
+              className="rounded-full bg-red"
+              pY={0.2}
+              onClick={resetKWH}
+            />
+          </div>
+        </div>
+      </MyModal>
     </div>
   );
 };
@@ -245,7 +329,7 @@ const MainPage: React.FC<MainPageProps> = ({}) => {
 export default MainPage;
 
 interface ElectricityBoxType {
-  type: "current" | "voltage" | "power" | "temperature" | "humidity";
+  type: "current" | "voltage" | "power" | "temperature" | "humidity" | "kwh";
   color: string;
   icon: React.ReactNode;
   unit: string;
@@ -267,9 +351,16 @@ const voltageType: ElectricityBoxType = {
 
 const powerType: ElectricityBoxType = {
   type: "power",
+  color: "border-orange",
+  icon: <WattIcon size={28} />,
+  unit: Constants.powerUnit,
+};
+
+const kwhType: ElectricityBoxType = {
+  type: "kwh",
   color: "border-yellow",
   icon: <BatteryIcon size={28} />,
-  unit: Constants.powerUnit,
+  unit: Constants.kwhUnit,
 };
 
 const tempType: ElectricityBoxType = {

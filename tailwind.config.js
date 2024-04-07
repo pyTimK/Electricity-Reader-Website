@@ -40,6 +40,7 @@ module.exports = {
         gcash_bg: "#ECEBF0",
         gcash_loading_bg: "#FEFEFE",
         gcash_blue: "#0056E4",
+        orange: "#F96715",
       },
     },
     

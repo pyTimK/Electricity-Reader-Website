@@ -11,6 +11,11 @@ export interface Device {
   limit3: number;
   limit4: number;
   limit5: number;
+  kwh1: number;
+  kwh2: number;
+  kwh3: number;
+  kwh4: number;
+  kwh5: number;
   temp: number;
   humidity: number;
 }
